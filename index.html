@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OBS Config & Scene Calculator — Presets e coleção de cenas</title>
+  <meta name="description" content="Crie presets de configuração e coleções de cenas para OBS Studio. Ideal para streamers, VTubers e criadores." />
+  <meta name="theme-color" content="#0c4a6e" />
+
+  <!-- ========== GOOGLE ANALYTICS PLACEHOLDER ========== -->
+  <!-- Troque G-XXXXXXXXXX pelo seu Measurement ID do GA4 -->
+  <!--
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
+  -->
+  <!-- ========== FIM GA PLACEHOLDER ========== -->
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            obs: {
+              50:  '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+    .card-transition { transition: all 0.25s ease; }
+    .alert-pulse { animation: pulse-border 2s infinite; }
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+    }
+    .preset-btn { transition: all 0.2s ease; }
+    .preset-btn:hover { transform: translateY(-2px); }
+
+    /* Floating support button pulse */
+    @keyframes soft-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); }
+      50% { box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); }
+    }
+    .support-pulse { animation: soft-pulse 2.5s infinite; }
+
+    details summary::-webkit-details-marker { display: none; }
+    details summary { list-style: none; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-obs-500 to-obs-700 flex items-center justify-center shadow-lg shadow-obs-500/20 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-base sm:text-xl font-bold tracking-tight truncate">OBS Config &amp; Scene Calculator</h1>
+          <p class="text-[11px] sm:text-xs text-slate-400 hidden sm:block">Presets de config + coleção de cenas</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="saveBtn" title="Salvar configuração atual"
+          class="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg transition">
+          💾 Salvar
+        </button>
+        <a href="#apoie" class="text-xs font-medium bg-pink-600/90 hover:bg-pink-500 text-white px-3 py-1.5 rounded-lg transition support-pulse">
+          ☕ Apoiar
+        </a>
+      </div>
+    </div>
+    <!-- Nav tabs -->
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1">
+      <button type="button" data-tab="calc" class="app-tab active px-4 py-2.5 text-sm font-medium border-b-2 border-obs-500 text-white transition">
+        ⚡ Preset de configurações
+      </button>
+      <button type="button" data-tab="scenes" class="app-tab px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-white hover:border-slate-600 transition">
+        🎬 Coleção de cenas <span class="text-[10px] font-normal text-amber-400/90 ml-0.5">Beta</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 lg:py-8">
+
+    <!-- ========== TAB: CALCULADORA ========== -->
+    <div id="tab-calc" class="tab-panel">
+
+    <!-- ===================== PRESETS RÁPIDOS ===================== -->
+    <section class="mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span class="text-2xl">⚡</span> Presets Rápidos
+          </h2>
+          <p class="text-sm text-slate-400 mt-0.5">Tá com pressa ou perdido? Escolhe teu PC + o que você quer fazer.</p>
+        </div>
+        <button id="loadSavedBtn" class="hidden text-xs text-obs-400 hover:text-obs-300 underline underline-offset-2">
+          ↩ Carregar última configuração salva
+        </button>
+      </div>
+
+      <!-- Hardware tier tabs -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button type="button" data-tier="weak" class="tier-tab px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 border border-slate-700 text-slate-300 hover:border-obs-500 hover:text-white transition">
+          🥔 PC Fraco
+        </button>
+        <button type="button" data-tier="mid" class="tier-tab px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 border border-slate-700 text-slate-300 hover:border-obs-500 hover:text-white transition">
+          💻 PC Intermediário
+        </button>
+        <button type="button" data-tier="high" class="tier-tab px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 border border-slate-700 text-slate-300 hover:border-obs-500 hover:text-white transition">
+          🚀 PC Top
+        </button>
+      </div>
+
+      <div id="presetGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <!-- preenchido via JS -->
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+
+      <!-- ===================== LEFT COLUMN: FORM ===================== -->
+      <section class="space-y-5">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
+          <h2 class="text-base font-semibold text-obs-400 mb-5 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Configuração do Hardware
+            <span class="text-[10px] font-normal text-slate-500 ml-auto">ou ajuste manualmente ↓</span>
+          </h2>
+
+          <div class="space-y-4 mb-6">
+            <h3 class="text-sm font-medium text-slate-300 border-b border-slate-800 pb-2">1. Placa de Vídeo (GPU)</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="gpuVendor" class="block text-xs text-slate-400 mb-1.5">Fabricante</label>
+                <select id="gpuVendor" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500 focus:border-transparent transition">
+                  <option value="nvidia">NVIDIA</option>
+                  <option value="amd">AMD</option>
+                  <option value="intel">Intel</option>
+                  <option value="integrated">Integrada / Sem GPU Dedicada</option>
+                </select>
+              </div>
+              <div>
+                <label for="gpuTier" class="block text-xs text-slate-400 mb-1.5">Porte / Memória de Vídeo (VRAM)</label>
+                <select id="gpuTier" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500 focus:border-transparent transition">
+                  <option value="entry">Entrada (2GB – 4GB)</option>
+                  <option value="mid" selected>Intermediária (6GB – 8GB)</option>
+                  <option value="high">Avançada (12GB+)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4 mb-6">
+            <h3 class="text-sm font-medium text-slate-300 border-b border-slate-800 pb-2">2. Processador (CPU)</h3>
+            <div>
+              <label for="cpuTier" class="block text-xs text-slate-400 mb-1.5">Nível do Processador</label>
+              <select id="cpuTier" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500 focus:border-transparent transition">
+                <option value="entry">Entrada (Quad-Core / até 4 núcleos)</option>
+                <option value="mid" selected>Intermediário (Hexa-Core / 6 núcleos)</option>
+                <option value="high">Avançado (Octa-Core+ / 8+ núcleos)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="space-y-4 mb-6">
+            <h3 class="text-sm font-medium text-slate-300 border-b border-slate-800 pb-2">3. Memória RAM</h3>
+            <div>
+              <label for="ram" class="block text-xs text-slate-400 mb-1.5">Quantidade de RAM</label>
+              <select id="ram" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500 focus:border-transparent transition">
+                <option value="8">8 GB</option>
+                <option value="16" selected>16 GB</option>
+                <option value="24">24 GB ou mais</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="space-y-4 mb-6">
+            <h3 class="text-sm font-medium text-slate-300 border-b border-slate-800 pb-2">4. Conexão de Internet (Upload)</h3>
+            <div class="flex items-end gap-3">
+              <div class="flex-1">
+                <label for="upload" class="block text-xs text-slate-400 mb-1.5">Velocidade de Upload (Mbps)</label>
+                <input type="number" id="upload" min="1" max="1000" value="20" step="1"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500 focus:border-transparent transition" />
+              </div>
+              <a href="https://fast.com" target="_blank" rel="noopener noreferrer"
+                class="shrink-0 text-xs text-obs-400 hover:text-obs-300 underline underline-offset-2 py-2.5 transition">
+                Testar Upload (Fast.com)
+              </a>
+            </div>
+            <p class="text-[11px] text-slate-500">Dica: use o valor real do seu upload. A calculadora aplica 30% de margem de segurança.</p>
+          </div>
+
+          <div class="space-y-4 mb-6">
+            <h3 class="text-sm font-medium text-slate-300 border-b border-slate-800 pb-2">5. Formato / Estilo da Transmissão</h3>
+            <div>
+              <label for="format" class="block text-xs text-slate-400 mb-1.5">Tipo de conteúdo</label>
+              <select id="format" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500 focus:border-transparent transition">
+                <option value="horizontal" selected>Live Horizontal (16:9)</option>
+                <option value="vertical">Live Vertical (9:16)</option>
+                <option value="dual">Dual Canvas simultâneo (16:9 + 9:16)</option>
+                <option value="recording">Apenas Gravação Offline / Edição</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-slate-300 border-b border-slate-800 pb-2">6. Recursos Extras em Uso</h3>
+            <div class="space-y-3">
+              <label class="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" id="vtuber" class="mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-obs-500 focus:ring-obs-500 focus:ring-offset-0" />
+                <span class="text-sm text-slate-300 group-hover:text-white transition">Uso Avatar VTuber (VTube Studio / Live2D / 3D)</span>
+              </label>
+              <label class="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" id="heavyGames" class="mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-obs-500 focus:ring-obs-500 focus:ring-offset-0" />
+                <span class="text-sm text-slate-300 group-hover:text-white transition">Rodo jogos pesados/atuais junto com a live</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <button id="generateBtn"
+          class="w-full bg-gradient-to-r from-obs-600 to-obs-500 hover:from-obs-500 hover:to-obs-400 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-obs-500/25 transition active:scale-[0.98]">
+          Gerar Configuração
+        </button>
+      </section>
+
+      <!-- ===================== RIGHT COLUMN: RESULTS ===================== -->
+      <section class="space-y-5">
+        <div id="activePresetBadge" class="hidden bg-obs-950/50 border border-obs-700/40 rounded-xl px-4 py-2.5 text-sm text-obs-300 flex items-center gap-2">
+          <span class="text-base">📌</span>
+          <span>Preset ativo: <strong id="activePresetName" class="text-white"></strong></span>
+        </div>
+
+        <div id="alertCard" class="rounded-2xl p-4 border card-transition hidden">
+          <div class="flex gap-3">
+            <span id="alertIcon" class="text-xl shrink-0"></span>
+            <div>
+              <h3 id="alertTitle" class="font-semibold text-sm mb-1"></h3>
+              <p id="alertMessage" class="text-sm leading-relaxed opacity-90"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tips card (dinâmico) -->
+        <div id="tipsCard" class="hidden bg-slate-900/80 border border-slate-700/60 rounded-2xl p-4">
+          <h3 class="text-sm font-semibold text-amber-400 mb-2 flex items-center gap-1.5">💡 Dicas rápidas pra essa config</h3>
+          <ul id="tipsList" class="text-xs text-slate-300 space-y-1.5 list-disc list-inside"></ul>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
+          <h2 class="text-base font-semibold text-obs-400 mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+            </svg>
+            Configuração do Encoder
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div class="bg-slate-800/60 rounded-lg p-3">
+              <span class="text-xs text-slate-400 block mb-0.5">Codificador</span>
+              <span id="outEncoder" class="font-medium text-white">—</span>
+            </div>
+            <div class="bg-slate-800/60 rounded-lg p-3">
+              <span class="text-xs text-slate-400 block mb-0.5">Controle de Taxa</span>
+              <span id="outRateControl" class="font-medium text-white">CBR</span>
+            </div>
+            <div class="bg-slate-800/60 rounded-lg p-3">
+              <span class="text-xs text-slate-400 block mb-0.5">Bitrate de Vídeo</span>
+              <span id="outBitrate" class="font-medium text-white">—</span>
+            </div>
+            <div class="bg-slate-800/60 rounded-lg p-3">
+              <span class="text-xs text-slate-400 block mb-0.5">Intervalo de Keyframe</span>
+              <span id="outKeyframe" class="font-medium text-white">2s</span>
+            </div>
+            <div class="bg-slate-800/60 rounded-lg p-3 sm:col-span-2">
+              <span class="text-xs text-slate-400 block mb-0.5">Preset de Desempenho</span>
+              <span id="outPreset" class="font-medium text-white">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
+          <h2 class="text-base font-semibold text-obs-400 mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Vídeo e Resolução (Canvas)
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div class="bg-slate-800/60 rounded-lg p-3">
+              <span class="text-xs text-slate-400 block mb-0.5">Resolução Base</span>
+              <span id="outBaseRes" class="font-medium text-white">—</span>
+            </div>
+            <div class="bg-slate-800/60 rounded-lg p-3">
+              <span class="text-xs text-slate-400 block mb-0.5">Resolução de Saída</span>
+              <span id="outOutputRes" class="font-medium text-white">—</span>
+            </div>
+            <div class="bg-slate-800/60 rounded-lg p-3">
+              <span class="text-xs text-slate-400 block mb-0.5">FPS Recomendado</span>
+              <span id="outFps" class="font-medium text-white">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
+          <h2 class="text-base font-semibold text-obs-400 mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+            Áudio
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div class="bg-slate-800/60 rounded-lg p-3">
+              <span class="text-xs text-slate-400 block mb-0.5">Bitrate de Áudio</span>
+              <span id="outAudioBitrate" class="font-medium text-white">160 Kbps</span>
+            </div>
+            <div class="bg-slate-800/60 rounded-lg p-3">
+              <span class="text-xs text-slate-400 block mb-0.5">Taxa de Amostragem</span>
+              <span id="outSampleRate" class="font-medium text-white">48 kHz</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button id="copyBtn"
+            class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 active:scale-[0.98]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span id="copyBtnText">Copiar Resumo</span>
+          </button>
+          <button id="shareBtn"
+            class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 active:scale-[0.98]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+            <span>Compartilhar</span>
+          </button>
+        </div>
+
+        <!-- Download OBS Profile -->
+        <button id="downloadProfileBtn"
+          class="w-full bg-gradient-to-r from-violet-700 to-obs-600 hover:from-violet-600 hover:to-obs-500 text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg shadow-violet-500/20 transition flex items-center justify-center gap-2 active:scale-[0.98]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span id="downloadProfileText">Baixar Perfil OBS (.zip)</span>
+        </button>
+        <button id="profileHelpBtn" type="button"
+          class="w-full text-sm text-obs-400 hover:text-obs-300 py-2 flex items-center justify-center gap-1.5 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Como usar este perfil? (instruções)
+        </button>
+      </section>
+    </div>
+
+    <!-- ===================== MODAL: Instruções do Perfil ===================== -->
+    <div id="profileHelpModal" class="fixed inset-0 z-[80] hidden items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" id="profileHelpBackdrop"></div>
+      <div class="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-slate-900 border-b border-slate-800 px-5 py-4 flex items-center justify-between rounded-t-2xl">
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <span class="text-xl">📦</span> Como usar o perfil OBS
+          </h2>
+          <button type="button" id="profileHelpClose" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition" aria-label="Fechar">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="px-5 py-5 space-y-5 text-sm text-slate-300 leading-relaxed">
+          <p class="text-slate-400">
+            O botão <strong class="text-white">Baixar Perfil OBS</strong> gera um arquivo <code class="text-obs-300 bg-slate-800 px-1 rounded">.zip</code> com as configurações de encoder, resolução, FPS e bitrate prontas pro OBS. É o atalho pra não ter que digitar tudo na mão.
+          </p>
+
+          <div>
+            <h3 class="font-semibold text-white mb-2 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-obs-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+              Baixe e extraia
+            </h3>
+            <p>Clique em <strong class="text-white">Baixar Perfil OBS (.zip)</strong>. Depois <strong class="text-white">extraia</strong> o ZIP (botão direito → Extrair tudo / Extract). Vai aparecer uma pasta com nome tipo <code class="text-obs-300 bg-slate-800 px-1 rounded text-xs">OCC_2026-10-24_1920x1080_60fps</code>.</p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-white mb-2 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-obs-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+              Importe no OBS
+            </h3>
+            <p class="mb-2">Abra o OBS Studio e use um destes jeitos:</p>
+            <ul class="space-y-2 text-slate-400">
+              <li class="flex gap-2">
+                <span class="text-emerald-400 shrink-0">A)</span>
+                <span><strong class="text-slate-200">Perfil → Importar</strong> (ou Profile → Import) → selecione a <em>pasta</em> que você extraiu (não o arquivo .zip).</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="text-emerald-400 shrink-0">B)</span>
+                <span>Copie a pasta para a pasta de perfis do OBS e reinicie o programa:<br>
+                  <code class="text-[11px] text-obs-300 bg-slate-800 px-1.5 py-0.5 rounded mt-1 inline-block">Windows: %APPDATA%\obs-studio\basic\profiles\</code>
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-white mb-2 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-obs-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+              Ative o perfil
+            </h3>
+            <p>No menu <strong class="text-white">Perfil</strong>, escolha o perfil que acabou de importar (nome começa com <code class="text-obs-300">OCC_</code>). As configs de vídeo e encoder já entram automaticamente.</p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-white mb-2 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-obs-600 text-white text-xs flex items-center justify-center font-bold">4</span>
+              Conecte sua transmissão
+            </h3>
+            <p>O perfil <strong class="text-amber-300">não traz</strong> chave de stream nem login. Vá em <strong class="text-white">Configurações → Transmissão</strong> e conecte Twitch, YouTube ou cole sua chave RTMP como você já fazia.</p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-white mb-2 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-obs-600 text-white text-xs flex items-center justify-center font-bold">5</span>
+              Ajuste o caminho de gravação
+            </h3>
+            <p>Em <strong class="text-white">Configurações → Saída → Gravação</strong>, confira a pasta onde os vídeos vão ser salvos (o perfil não define caminho do seu PC de propósito).</p>
+          </div>
+
+          <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+            <h3 class="font-semibold text-amber-300 mb-2 text-sm">⚠️ O que o perfil NÃO muda</h3>
+            <ul class="text-xs text-slate-400 space-y-1 list-disc list-inside">
+              <li>Cenas, fontes, overlays e filtros (isso fica na Coleção de Cenas)</li>
+              <li>Conta / chave de stream</li>
+              <li>Plugins e scripts que você já tinha</li>
+              <li>Hotkeys e layout da interface</li>
+            </ul>
+          </div>
+
+          <div class="bg-emerald-950/40 border border-emerald-800/50 rounded-xl p-4">
+            <h3 class="font-semibold text-emerald-300 mb-2 text-sm">✅ Dica final</h3>
+            <p class="text-xs text-slate-300">Depois de importar, faça um teste de 5–10 minutos (sem ir ao vivo) e olhe o painel <strong class="text-white">Estatísticas</strong> do OBS: FPS estável, encoding sem “lagged frames” e uso de CPU/GPU sob controle = config boa.</p>
+          </div>
+        </div>
+
+        <div class="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-5 py-3 flex gap-2 rounded-b-2xl">
+          <button type="button" id="profileHelpClose2"
+            class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2.5 rounded-xl transition text-sm">
+            Entendi
+          </button>
+          <button type="button" id="profileHelpDownload"
+            class="flex-1 bg-obs-600 hover:bg-obs-500 text-white font-medium py-2.5 rounded-xl transition text-sm">
+            Baixar perfil agora
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== FAQ ===================== -->
+    <section class="mt-12 max-w-3xl mx-auto">
+      <h2 class="text-lg font-bold text-white mb-4 text-center">❓ Perguntas frequentes</h2>
+      <div class="space-y-2">
+        <details class="bg-slate-900 border border-slate-800 rounded-xl group">
+          <summary class="px-4 py-3 cursor-pointer text-sm font-medium flex items-center justify-between">
+            Onde coloco essas configs no OBS?
+            <span class="text-slate-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+            Vá em <strong class="text-slate-200">Configurações → Saída</strong>. Mude o modo para <em>Avançado</em>. Na aba Streaming (ou Gravação) você encontra Encoder, Controle de taxa, Bitrate, Keyframe e Preset. Em <strong class="text-slate-200">Vídeo</strong> você define resolução base, saída e FPS.
+          </div>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl group">
+          <summary class="px-4 py-3 cursor-pointer text-sm font-medium flex items-center justify-between">
+            NVENC ou x264? Qual é melhor?
+            <span class="text-slate-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+            Se você tem GPU NVIDIA (especialmente 20-series pra cima), <strong class="text-slate-200">NVENC</strong> é quase sempre melhor: libera a CPU pro jogo. x264 só vale a pena em CPU muito forte (Ryzen 7/9, i7/i9 recentes) e quando você quer qualidade máxima em bitrate baixo.
+          </div>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl group">
+          <summary class="px-4 py-3 cursor-pointer text-sm font-medium flex items-center justify-between">
+            Por que a calculadora “corta” 30% do meu upload?
+            <span class="text-slate-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+            Rede oscila. Se você usar 100% do upload, qualquer pico faz o stream dropar frames ou bufferizar pro viewer. A margem de 30% deixa folga pro jogo, Discord, navegador e variações da operadora.
+          </div>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl group">
+          <summary class="px-4 py-3 cursor-pointer text-sm font-medium flex items-center justify-between">
+            Dual Canvas + VTuber trava meu PC. O que fazer?
+            <span class="text-slate-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+            Dual Canvas praticamente dobra o trabalho de render. Com VTube Studio ainda por cima, GPUs com menos de 12 GB sofrem. Soluções: use só um canvas, baixe a resolução do avatar, limite o jogo a 60 FPS com V-Sync/RTSS, ou faça o vertical em outra máquina/cloud.
+          </div>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl group">
+          <summary class="px-4 py-3 cursor-pointer text-sm font-medium flex items-center justify-between">
+            Como importo o perfil .zip no OBS?
+            <span class="text-slate-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+            1) Baixe o ZIP e <strong class="text-slate-200">extraia</strong> a pasta.<br>
+            2) No OBS: menu <strong class="text-slate-200">Perfil → Importar</strong> e selecione a pasta extraída.<br>
+            3) Ou copie a pasta para <code class="text-obs-300">%APPDATA%\obs-studio\basic\profiles\</code> (Windows).<br>
+            O perfil traz encoder, bitrate, resolução e FPS. <em>Não</em> traz chave de stream nem cenas — conecte sua conta e use sua Coleção de Cenas normalmente.
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ===================== APOIE / MONETIZAÇÃO ===================== -->
+    <section id="apoie" class="mt-14 scroll-mt-24">
+      <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-pink-950/30 border border-slate-800 rounded-2xl p-6 sm:p-8 text-center max-w-2xl mx-auto shadow-xl">
+        <div class="text-4xl mb-3">☕</div>
+        <h2 class="text-xl font-bold text-white mb-2">Gostou da ferramenta?</h2>
+        <p class="text-sm text-slate-400 mb-6 max-w-md mx-auto">
+          Ela é 100% gratuita e sem anúncio invasivo. Se te ajudou a configurar a live sem dor de cabeça, considera apoiar — qualquer valor ajuda a manter e melhorar o projeto.
+        </p>
+
+        <div class="flex flex-col sm:flex-row flex-wrap justify-center gap-3">
+          <!-- PIX (placeholder) -->
+          <a href="#" id="pixBtn" onclick="return false;"
+            class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-2.5 rounded-xl transition text-sm">
+            💚 PIX (Brasil)
+          </a>
+          <!-- Ko-fi / Buy Me a Coffee (placeholder) -->
+          <a href="https://ko-fi.com/" target="_blank" rel="noopener noreferrer"
+            class="inline-flex items-center justify-center gap-2 bg-pink-600 hover:bg-pink-500 text-white font-medium px-5 py-2.5 rounded-xl transition text-sm">
+            ☕ Ko-fi / Cafézinho
+          </a>
+          <!-- LivePix / Live (placeholder) -->
+          <a href="#" id="livepixBtn" onclick="return false;"
+            class="inline-flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-medium px-5 py-2.5 rounded-xl transition text-sm">
+            💜 LivePix / Membro
+          </a>
+        </div>
+
+        <p class="text-[11px] text-slate-500 mt-5">
+          <!-- Troque os hrefs acima pelos seus links reais de PIX, Ko-fi, LivePix, etc. -->
+          Links de apoio são placeholders — substitua pelos seus.
+        </p>
+      </div>
+    </section>
+
+    <!-- Hardware recomendado (afiliados placeholder) -->
+    <section class="mt-10 max-w-3xl mx-auto">
+      <h2 class="text-sm font-semibold text-slate-400 mb-3 text-center uppercase tracking-wider">Hardware que costuma funcionar bem</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center text-xs">
+        <a href="#" class="bg-slate-900 border border-slate-800 hover:border-obs-600 rounded-xl p-4 transition block" onclick="return false;">
+          <div class="text-2xl mb-1">🎤</div>
+          <div class="font-medium text-slate-200">Microfone USB</div>
+          <div class="text-slate-500 mt-0.5">Link afiliado (placeholder)</div>
+        </a>
+        <a href="#" class="bg-slate-900 border border-slate-800 hover:border-obs-600 rounded-xl p-4 transition block" onclick="return false;">
+          <div class="text-2xl mb-1">📹</div>
+          <div class="font-medium text-slate-200">Webcam 1080p</div>
+          <div class="text-slate-500 mt-0.5">Link afiliado (placeholder)</div>
+        </a>
+        <a href="#" class="bg-slate-900 border border-slate-800 hover:border-obs-600 rounded-xl p-4 transition block" onclick="return false;">
+          <div class="text-2xl mb-1">🔌</div>
+          <div class="font-medium text-slate-200">Capture Card</div>
+          <div class="text-slate-500 mt-0.5">Link afiliado (placeholder)</div>
+        </a>
+      </div>
+      <p class="text-[10px] text-slate-600 text-center mt-2">Área de afiliados — substitua pelos seus links da Amazon, Magazine, etc.</p>
+    </section>
+
+    </div><!-- /tab-calc -->
+
+    <!-- ========== TAB: CENAS (Beta) ========== -->
+    <div id="tab-scenes" class="tab-panel hidden">
+
+      <div class="max-w-3xl mx-auto space-y-6">
+
+        <div class="text-center">
+          <h2 class="text-2xl font-bold text-white mb-1">🎬 Coleção de cenas <span class="text-sm font-normal text-amber-400">Beta</span></h2>
+          <p class="text-slate-400 text-sm">
+            Escolhe o estilo da live, marca as cenas e baixa um JSON limpo pra importar no OBS.
+            Depois você só aponta imagem, mic e captura na sua máquina.
+          </p>
+        </div>
+
+        <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-6">
+
+          <!-- Nome -->
+          <div>
+            <label for="sceneColName" class="block text-xs text-slate-400 mb-1.5">Nome da coleção</label>
+            <input id="sceneColName" type="text" value="Minha Live" maxlength="60"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500" />
+          </div>
+
+          <!-- Estilo: Webcam vs VTuber -->
+          <div>
+            <h4 class="text-sm font-semibold text-slate-200 mb-2">Como você aparece na live?</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label class="relative flex flex-col gap-1 p-4 rounded-xl border-2 border-slate-700 bg-slate-800/40 cursor-pointer has-[:checked]:border-obs-500 has-[:checked]:bg-obs-950/30 transition">
+                <input type="radio" name="appearMode" value="webcam" class="sr-only" checked />
+                <span class="text-2xl">📹</span>
+                <span class="font-semibold text-white text-sm">Webcam / eu mesmo</span>
+                <span class="text-xs text-slate-400">Captura de dispositivo de vídeo. Ideal pra facecam.</span>
+              </label>
+              <label class="relative flex flex-col gap-1 p-4 rounded-xl border-2 border-slate-700 bg-slate-800/40 cursor-pointer has-[:checked]:border-violet-500 has-[:checked]:bg-violet-950/30 transition">
+                <input type="radio" name="appearMode" value="vtuber" class="sr-only" />
+                <span class="text-2xl">🦊</span>
+                <span class="font-semibold text-white text-sm">VTuber / avatar</span>
+                <span class="text-xs text-slate-400">Captura de jogo com transparência (VSeeFace, VTube Studio, Warudo…)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Checklist de cenas com texto editável -->
+          <div>
+            <h4 class="text-sm font-semibold text-slate-200 mb-2">Quais cenas montar?</h4>
+            <p class="text-xs text-slate-500 mb-3">Marca a cena e, se quiser, edita o texto com o lápis.</p>
+            <div class="space-y-2" id="sceneChecklist">
+
+              <!-- START -->
+              <div class="scene-row rounded-xl bg-slate-800/50 border border-slate-700/60 p-3" data-scene="start">
+                <div class="flex items-start gap-3">
+                  <input type="checkbox" class="scene-pick mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-obs-500 focus:ring-obs-500" data-scene="start" checked />
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium text-white">🚀 Início da live</span>
+                      <button type="button" class="pencil-btn text-slate-500 hover:text-obs-400 p-0.5" data-for="txt-start" title="Editar texto">✏️</button>
+                    </div>
+                    <p class="text-xs text-slate-500">Tela fixa enquanto o chat entra</p>
+                    <input id="txt-start" type="text" value="A LIVE VAI COMEÇAR!"
+                      class="scene-text mt-2 w-full hidden bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- BRB -->
+              <div class="scene-row rounded-xl bg-slate-800/50 border border-slate-700/60 p-3" data-scene="brb">
+                <div class="flex items-start gap-3">
+                  <input type="checkbox" class="scene-pick mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-obs-500 focus:ring-obs-500" data-scene="brb" checked />
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium text-white">⏸️ Volto já</span>
+                      <button type="button" class="pencil-btn text-slate-500 hover:text-obs-400 p-0.5" data-for="txt-brb" title="Editar texto">✏️</button>
+                    </div>
+                    <p class="text-xs text-slate-500">Pausa rápida sem cortar a live</p>
+                    <input id="txt-brb" type="text" value="VOLTO JÁ! Pausa rápida 💜"
+                      class="scene-text mt-2 w-full hidden bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- MAIN -->
+              <div class="scene-row rounded-xl bg-slate-800/50 border border-slate-700/60 p-3" data-scene="main">
+                <div class="flex items-start gap-3">
+                  <input type="checkbox" class="scene-pick mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-obs-500 focus:ring-obs-500" data-scene="main" checked />
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium text-white">🎮 Principal (gameplay + você)</span>
+                      <button type="button" class="pencil-btn text-slate-500 hover:text-obs-400 p-0.5" data-for="txt-main" title="Editar texto">✏️</button>
+                    </div>
+                    <p class="text-xs text-slate-500">Jogo em tela cheia + webcam ou avatar no canto</p>
+                    <input id="txt-main" type="text" value=""
+                      class="scene-text mt-2 w-full hidden bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500" placeholder="Texto opcional (pode deixar vazio)" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- CHAT -->
+              <div class="scene-row rounded-xl bg-slate-800/50 border border-slate-700/60 p-3" data-scene="chat">
+                <div class="flex items-start gap-3">
+                  <input type="checkbox" class="scene-pick mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-obs-500 focus:ring-obs-500" data-scene="chat" />
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium text-white">💬 Só conversa</span>
+                      <button type="button" class="pencil-btn text-slate-500 hover:text-obs-400 p-0.5" data-for="txt-chat" title="Editar texto">✏️</button>
+                    </div>
+                    <p class="text-xs text-slate-500">Cenário de fundo + você em destaque (sem jogo)</p>
+                    <input id="txt-chat" type="text" value="Bora conversar!"
+                      class="scene-text mt-2 w-full hidden bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- REACT -->
+              <div class="scene-row rounded-xl bg-slate-800/50 border border-slate-700/60 p-3" data-scene="react">
+                <div class="flex items-start gap-3">
+                  <input type="checkbox" class="scene-pick mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-obs-500 focus:ring-obs-500" data-scene="react" />
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium text-white">📺 React / janela</span>
+                      <button type="button" class="pencil-btn text-slate-500 hover:text-obs-400 p-0.5" data-for="txt-react" title="Editar texto">✏️</button>
+                    </div>
+                    <p class="text-xs text-slate-500">Captura de janela ou navegador (vídeo, TikTok, etc.) + você no canto</p>
+                    <input id="txt-react" type="text" value=""
+                      class="scene-text mt-2 w-full hidden bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500" placeholder="Texto opcional" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- END -->
+              <div class="scene-row rounded-xl bg-slate-800/50 border border-slate-700/60 p-3" data-scene="end">
+                <div class="flex items-start gap-3">
+                  <input type="checkbox" class="scene-pick mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-obs-500 focus:ring-obs-500" data-scene="end" checked />
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium text-white">👋 Tchau</span>
+                      <button type="button" class="pencil-btn text-slate-500 hover:text-obs-400 p-0.5" data-for="txt-end" title="Editar texto">✏️</button>
+                    </div>
+                    <p class="text-xs text-slate-500">Encerramento + redes</p>
+                    <input id="txt-end" type="text" value="VALEU POR ASSISTIR! Até a próxima 👋"
+                      class="scene-text mt-2 w-full hidden bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-obs-500" />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Extras opcionais -->
+          <div>
+            <h4 class="text-sm font-semibold text-slate-200 mb-2">Extras (opcional)</h4>
+            <div class="space-y-2">
+              <label class="flex items-center gap-2.5 p-3 rounded-xl bg-slate-800/40 border border-slate-700/50 cursor-pointer hover:border-obs-600 transition">
+                <input type="checkbox" id="optChatBrowser" class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-obs-500 focus:ring-obs-500" />
+                <span class="text-sm text-slate-200">💬 Slot de navegador pro chat / alertas <span class="text-xs text-slate-500">(Streamlabs, StreamElements…)</span></span>
+              </label>
+              <label class="flex items-center gap-2.5 p-3 rounded-xl bg-slate-800/40 border border-slate-700/50 cursor-pointer hover:border-obs-600 transition">
+                <input type="checkbox" id="optOverlayBrowser" class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-obs-500 focus:ring-obs-500" />
+                <span class="text-sm text-slate-200">✨ Slot de overlay HTML <span class="text-xs text-slate-500">(widget, meta, etc.)</span></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-1">
+            <button type="button" id="buildScenesBtn"
+              class="w-full bg-gradient-to-r from-violet-600 to-obs-500 hover:from-violet-500 hover:to-obs-400 text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg transition active:scale-[0.98]">
+              📥 Gerar e baixar coleção (.json)
+            </button>
+            <p class="text-[11px] text-slate-500 text-center mt-2">
+              OBS → <strong class="text-slate-400">Coleção de Cenas → Importar</strong>. Depois configure imagem, captura e mic.
+            </p>
+          </div>
+        </section>
+
+        <!-- Depois de importar -->
+        <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm">
+          <h3 class="font-semibold text-white mb-3">Depois de importar</h3>
+          <ol class="list-decimal list-inside space-y-1.5 text-slate-400">
+            <li><strong class="text-slate-200">Cenário / imagem:</strong> Propriedades → escolha o PNG/JPG no seu PC</li>
+            <li><strong class="text-slate-200">Gameplay:</strong> Captura de jogo → janela do jogo</li>
+            <li><strong class="text-slate-200">Webcam:</strong> escolha o dispositivo de vídeo</li>
+            <li><strong class="text-slate-200">VTuber:</strong> Captura de jogo → VSeeFace/VTube Studio + “Permitir transparência”</li>
+            <li><strong class="text-slate-200">React:</strong> Captura de janela ou Navegador → a aba/app que você vai reagir</li>
+            <li><strong class="text-slate-200">Chat/alertas:</strong> cole a URL do widget no Navegador</li>
+            <li><strong class="text-slate-200">Microfone:</strong> no mixer do OBS (não vem no template)</li>
+          </ol>
+        </section>
+
+        <!-- Tutorial no rodapé da aba -->
+        <section class="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+          <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Dica extra · Aprenda mais OBS</span>
+              <h3 class="text-sm font-bold text-white mt-0.5">Como colocar um personagem / avatar no OBS</h3>
+            </div>
+            <a href="https://www.youtube.com/watch?v=uqSudgQW-0s" target="_blank" rel="noopener noreferrer"
+              class="shrink-0 inline-flex items-center gap-2 bg-red-600/90 hover:bg-red-500 text-white text-xs font-medium px-3 py-2 rounded-lg transition">
+              ▶ Ver no YouTube
+            </a>
+          </div>
+          <div class="aspect-video bg-black border-t border-slate-800">
+            <iframe class="w-full h-full" src="https://www.youtube.com/embed/uqSudgQW-0s"
+              title="Como colocar personagem no OBS" frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen loading="lazy"></iframe>
+          </div>
+        </section>
+
+      </div>
+    </div><!-- /tab-scenes -->
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 mt-12 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div class="text-center sm:text-left">
+          <p class="font-medium text-slate-400">OBS Config &amp; Scene Calculator</p>
+          <p class="mt-0.5">Desenvolvido para criadores e streamers • Gratuito e open-friendly</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <!-- Social placeholders -->
+          <a href="#" class="hover:text-obs-400 transition" title="YouTube" onclick="return false;">YouTube</a>
+          <a href="#" class="hover:text-obs-400 transition" title="Twitter/X" onclick="return false;">X / Twitter</a>
+          <a href="#" class="hover:text-obs-400 transition" title="Discord" onclick="return false;">Discord</a>
+          <a href="#apoie" class="hover:text-pink-400 transition">Apoiar</a>
+        </div>
+      </div>
+      <p class="text-center text-[11px] text-slate-600 mt-5">
+        Não substitui testes reais. Sempre monitore FPS e uso de GPU/CPU durante a transmissão.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-600 text-sm text-white px-4 py-2.5 rounded-xl shadow-2xl opacity-0 pointer-events-none transition-opacity duration-300 z-[100]">
+    —
+  </div>
+
+  <script>
+    // ============================================================
+    // OBS CONFIG CALCULATOR — Core + Presets + Extras
+    // ============================================================
+
+    const $ = (id) => document.getElementById(id);
+
+    const inputs = {
+      gpuVendor: $('gpuVendor'),
+      gpuTier:   $('gpuTier'),
+      cpuTier:   $('cpuTier'),
+      ram:       $('ram'),
+      upload:    $('upload'),
+      format:    $('format'),
+      vtuber:    $('vtuber'),
+      heavyGames:$('heavyGames'),
+    };
+
+    const outputs = {
+      encoder:       $('outEncoder'),
+      rateControl:   $('outRateControl'),
+      bitrate:       $('outBitrate'),
+      keyframe:      $('outKeyframe'),
+      preset:        $('outPreset'),
+      baseRes:       $('outBaseRes'),
+      outputRes:     $('outOutputRes'),
+      fps:           $('outFps'),
+      audioBitrate:  $('outAudioBitrate'),
+      sampleRate:    $('outSampleRate'),
+    };
+
+    const alertCard    = $('alertCard');
+    const alertIcon    = $('alertIcon');
+    const alertTitle   = $('alertTitle');
+    const alertMessage = $('alertMessage');
+    const tipsCard     = $('tipsCard');
+    const tipsList     = $('tipsList');
+    const copyBtn      = $('copyBtn');
+    const copyBtnText  = $('copyBtnText');
+    const shareBtn     = $('shareBtn');
+    const downloadProfileBtn = $('downloadProfileBtn');
+    const downloadProfileText = $('downloadProfileText');
+    const generateBtn  = $('generateBtn');
+    const presetGrid   = $('presetGrid');
+    const activeBadge  = $('activePresetBadge');
+    const activeName   = $('activePresetName');
+    const saveBtn      = $('saveBtn');
+    const loadSavedBtn = $('loadSavedBtn');
+    const toastEl      = $('toast');
+
+    let currentConfig = {};
+    let currentTier = 'weak';
+    let activePresetId = null;
+
+    // ---------- Toast helper ----------
+    function toast(msg, ms = 2200) {
+      toastEl.textContent = msg;
+      toastEl.classList.remove('opacity-0');
+      toastEl.classList.add('opacity-100');
+      clearTimeout(toastEl._t);
+      toastEl._t = setTimeout(() => {
+        toastEl.classList.add('opacity-0');
+        toastEl.classList.remove('opacity-100');
+      }, ms);
+    }
+
+    // ---------- Analytics helper (dispara se GA estiver ativo) ----------
+    function track(eventName, params = {}) {
+      if (typeof gtag === 'function') {
+        gtag('event', eventName, params);
+      }
+      // console.log('[track]', eventName, params); // debug
+    }
+
+    // ============================================================
+    // PRESETS
+    // ============================================================
+    const PRESETS = {
+      weak: [
+        { id: 'weak-chat', icon: '💬', title: 'Só Conversa', desc: 'Just Chatting, reação, podcast. Mínimo de carga.', color: 'emerald',
+          values: { gpuVendor: 'integrated', gpuTier: 'entry', cpuTier: 'entry', ram: '8', upload: 15, format: 'horizontal', vtuber: false, heavyGames: false } },
+        { id: 'weak-game', icon: '🎮', title: 'Gameplay Leve', desc: 'Jogos leves / indies. 720p60 seguro.', color: 'sky',
+          values: { gpuVendor: 'nvidia', gpuTier: 'entry', cpuTier: 'entry', ram: '8', upload: 20, format: 'horizontal', vtuber: false, heavyGames: false } },
+        { id: 'weak-vtuber', icon: '🦊', title: 'VTuber Minimal', desc: 'Avatar 2D simples + conversa. Evita jogos pesados.', color: 'violet',
+          values: { gpuVendor: 'nvidia', gpuTier: 'entry', cpuTier: 'mid', ram: '16', upload: 20, format: 'horizontal', vtuber: true, heavyGames: false } },
+        { id: 'weak-vertical', icon: '📱', title: 'Só Vertical (TikTok/Reels)', desc: 'Live vertical 9:16. Menos pixels = menos dor.', color: 'pink',
+          values: { gpuVendor: 'integrated', gpuTier: 'entry', cpuTier: 'entry', ram: '8', upload: 12, format: 'vertical', vtuber: false, heavyGames: false } },
+      ],
+      mid: [
+        { id: 'mid-chat', icon: '💬', title: 'Só Conversa', desc: '1080p60 limpo. Pode abrir várias fontes sem medo.', color: 'emerald',
+          values: { gpuVendor: 'nvidia', gpuTier: 'mid', cpuTier: 'mid', ram: '16', upload: 25, format: 'horizontal', vtuber: false, heavyGames: false } },
+        { id: 'mid-game', icon: '🎮', title: 'Gameplay Normal', desc: 'AAA atuais em 1080p30/60. Equilíbrio clássico.', color: 'sky',
+          values: { gpuVendor: 'nvidia', gpuTier: 'mid', cpuTier: 'mid', ram: '16', upload: 30, format: 'horizontal', vtuber: false, heavyGames: true } },
+        { id: 'mid-vtuber', icon: '🦊', title: 'Gameplay + VTuber', desc: 'Avatar + jogo. Exige mais VRAM — cuidado com dual.', color: 'violet',
+          values: { gpuVendor: 'nvidia', gpuTier: 'mid', cpuTier: 'mid', ram: '16', upload: 30, format: 'horizontal', vtuber: true, heavyGames: true } },
+        { id: 'mid-dual', icon: '📺', title: 'Dual Stream', desc: 'Twitch 16:9 + TikTok 9:16 ao mesmo tempo.', color: 'amber',
+          values: { gpuVendor: 'nvidia', gpuTier: 'mid', cpuTier: 'high', ram: '16', upload: 40, format: 'dual', vtuber: false, heavyGames: false } },
+        { id: 'mid-record', icon: '🎬', title: 'Gravação YouTube', desc: 'Offline, bitrate alto, qualidade máxima possível.', color: 'rose',
+          values: { gpuVendor: 'nvidia', gpuTier: 'mid', cpuTier: 'mid', ram: '16', upload: 50, format: 'recording', vtuber: false, heavyGames: false } },
+      ],
+      high: [
+        { id: 'high-chat', icon: '💬', title: 'Só Conversa Pro', desc: '1080p60 + áudio 320. Pode colocar 4 câmeras se quiser.', color: 'emerald',
+          values: { gpuVendor: 'nvidia', gpuTier: 'high', cpuTier: 'high', ram: '24', upload: 50, format: 'horizontal', vtuber: false, heavyGames: false } },
+        { id: 'high-game', icon: '🎮', title: 'Gameplay Ultra', desc: '1080p60 estável mesmo em jogos pesados.', color: 'sky',
+          values: { gpuVendor: 'nvidia', gpuTier: 'high', cpuTier: 'high', ram: '24', upload: 50, format: 'horizontal', vtuber: false, heavyGames: true } },
+        { id: 'high-vtuber', icon: '🦊', title: 'VTuber Full Power', desc: 'Avatar 3D + jogo AAA + overlays. Máquina aguenta.', color: 'violet',
+          values: { gpuVendor: 'nvidia', gpuTier: 'high', cpuTier: 'high', ram: '24', upload: 50, format: 'horizontal', vtuber: true, heavyGames: true } },
+        { id: 'high-dual', icon: '📺', title: 'Dual + VTuber', desc: 'Dual canvas + avatar. Só com 12GB+ de VRAM.', color: 'amber',
+          values: { gpuVendor: 'nvidia', gpuTier: 'high', cpuTier: 'high', ram: '24', upload: 60, format: 'dual', vtuber: true, heavyGames: true } },
+        { id: 'high-record', icon: '🎬', title: 'Gravação 4K / Master', desc: 'Gravação local em qualidade máxima para edição.', color: 'rose',
+          values: { gpuVendor: 'nvidia', gpuTier: 'high', cpuTier: 'high', ram: '24', upload: 100, format: 'recording', vtuber: false, heavyGames: false } },
+        { id: 'high-competitive', icon: '⚡', title: 'Competitive / Low Latency', desc: 'Prioriza FPS do jogo. Preset performance + bitrate controlado.', color: 'cyan',
+          values: { gpuVendor: 'nvidia', gpuTier: 'high', cpuTier: 'high', ram: '24', upload: 40, format: 'horizontal', vtuber: false, heavyGames: true } },
+      ]
+    };
+
+    const COLOR_MAP = {
+      emerald: { border: 'border-emerald-700/50', hover: 'hover:border-emerald-500', bg: 'bg-emerald-950/30' },
+      sky:     { border: 'border-sky-700/50',     hover: 'hover:border-sky-500',     bg: 'bg-sky-950/30' },
+      violet:  { border: 'border-violet-700/50',  hover: 'hover:border-violet-500',  bg: 'bg-violet-950/30' },
+      amber:   { border: 'border-amber-700/50',   hover: 'hover:border-amber-500',   bg: 'bg-amber-950/30' },
+      pink:    { border: 'border-pink-700/50',    hover: 'hover:border-pink-500',    bg: 'bg-pink-950/30' },
+      rose:    { border: 'border-rose-700/50',    hover: 'hover:border-rose-500',    bg: 'bg-rose-950/30' },
+      cyan:    { border: 'border-cyan-700/50',    hover: 'hover:border-cyan-500',    bg: 'bg-cyan-950/30' },
+    };
+
+    function renderPresets(tier) {
+      currentTier = tier;
+      const list = PRESETS[tier] || [];
+      presetGrid.innerHTML = '';
+
+      list.forEach(p => {
+        const c = COLOR_MAP[p.color] || COLOR_MAP.sky;
+        const isActive = activePresetId === p.id;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `preset-btn text-left rounded-xl border p-4 ${c.border} ${c.hover} ${c.bg} transition group ${isActive ? 'ring-2 ring-obs-500 border-obs-500' : ''}`;
+        btn.innerHTML = `
+          <div class="flex items-start gap-3">
+            <span class="text-2xl shrink-0">${p.icon}</span>
+            <div class="min-w-0">
+              <div class="font-semibold text-sm text-white group-hover:text-obs-300 transition">${p.title}</div>
+              <p class="text-xs text-slate-400 mt-1 leading-snug">${p.desc}</p>
+            </div>
+          </div>`;
+        btn.addEventListener('click', () => applyPreset(p));
+        presetGrid.appendChild(btn);
+      });
+
+      document.querySelectorAll('.tier-tab').forEach(tab => {
+        const on = tab.dataset.tier === tier;
+        tab.classList.toggle('bg-obs-600', on);
+        tab.classList.toggle('border-obs-500', on);
+        tab.classList.toggle('text-white', on);
+        tab.classList.toggle('bg-slate-800', !on);
+        tab.classList.toggle('border-slate-700', !on);
+        tab.classList.toggle('text-slate-300', !on);
+      });
+    }
+
+    function applyPreset(preset) {
+      const v = preset.values;
+      inputs.gpuVendor.value = v.gpuVendor;
+      inputs.gpuTier.value   = v.gpuTier;
+      inputs.cpuTier.value   = v.cpuTier;
+      inputs.ram.value       = v.ram;
+      inputs.upload.value    = v.upload;
+      inputs.format.value    = v.format;
+      inputs.vtuber.checked  = v.vtuber;
+      inputs.heavyGames.checked = v.heavyGames;
+
+      activePresetId = preset.id;
+      activeBadge.classList.remove('hidden');
+      activeName.textContent = `${preset.icon} ${preset.title}`;
+
+      renderPresets(currentTier);
+      calculate();
+      track('preset_applied', { preset_id: preset.id, tier: currentTier });
+
+      if (window.innerWidth < 1024) {
+        alertCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    // ============================================================
+    // CÁLCULO
+    // ============================================================
+    function calculate() {
+      const gpuVendor  = inputs.gpuVendor.value;
+      const gpuTier    = inputs.gpuTier.value;
+      const cpuTier    = inputs.cpuTier.value;
+      const ram        = parseInt(inputs.ram.value, 10);
+      const uploadMbps = Math.max(1, parseFloat(inputs.upload.value) || 20);
+      const format     = inputs.format.value;
+      const vtuber     = inputs.vtuber.checked;
+      const heavyGames = inputs.heavyGames.checked;
+
+      let encoder = '';
+      switch (gpuVendor) {
+        case 'nvidia': encoder = 'NVIDIA NVENC H.264 (new)'; break;
+        case 'amd':    encoder = 'AMD HW H.264 / AMF'; break;
+        case 'intel':  encoder = 'Intel QuickSync H.264'; break;
+        default:       encoder = 'x264 (Processador)'; break;
+      }
+
+      const availableMbps = uploadMbps * 0.70;
+      const availableKbps = Math.floor(availableMbps * 1000);
+
+      let outputRes = '1920x1080';
+      let baseRes   = '1920x1080';
+      let fps       = 60;
+      let maxBitrate = 6000;
+
+      const weakGpu   = gpuTier === 'entry';
+      const lowRam    = ram < 16;
+      const lowUpload = availableMbps < 6;
+
+      if (lowUpload) {
+        outputRes = '1280x720';
+        baseRes   = format === 'vertical' ? '1080x1920' : '1920x1080';
+        fps       = availableMbps < 4 ? 30 : 60;
+        maxBitrate = 3500;
+      } else if (weakGpu || lowRam) {
+        if (gpuTier === 'high' && ram >= 16) {
+          outputRes = '1920x1080'; fps = 30; maxBitrate = 4500;
+        } else {
+          outputRes = '1280x720'; fps = 60; maxBitrate = 4500;
+        }
+        baseRes = format === 'vertical' ? '1080x1920' : '1920x1080';
+      } else if (gpuTier === 'high' && ram >= 16) {
+        outputRes = '1920x1080'; fps = 60; maxBitrate = 8000;
+        baseRes = format === 'vertical' ? '1080x1920' : '1920x1080';
+      } else {
+        outputRes = '1920x1080';
+        fps = (heavyGames || vtuber) ? 30 : 60;
+        maxBitrate = fps === 60 ? 6000 : 4500;
+        baseRes = format === 'vertical' ? '1080x1920' : '1920x1080';
+      }
+
+      if (format === 'vertical') {
+        if (outputRes === '1920x1080') { outputRes = '1080x1920'; baseRes = '1080x1920'; }
+        else { outputRes = '720x1280'; baseRes = '1080x1920'; }
+      } else if (format === 'dual') {
+        if (gpuTier !== 'high') { outputRes = '1280x720'; fps = 30; maxBitrate = 4000; }
+        baseRes = '1920x1080';
+      } else if (format === 'recording') {
+        maxBitrate = Math.min(availableKbps, gpuTier === 'high' ? 15000 : 10000);
+        if (gpuTier === 'high' && ram >= 16) { outputRes = '1920x1080'; fps = 60; }
+      }
+
+      if (activePresetId === 'high-competitive') {
+        maxBitrate = Math.min(maxBitrate, 6000);
+      }
+
+      let bitrate = Math.min(availableKbps, maxBitrate);
+      bitrate = Math.floor(bitrate / 50) * 50;
+      if (bitrate < 1500) bitrate = 1500;
+
+      let preset = '';
+      if (encoder.startsWith('x264')) {
+        if (cpuTier === 'high') preset = 'veryfast';
+        else if (cpuTier === 'mid') preset = 'superfast';
+        else preset = 'ultrafast';
+      } else {
+        if (activePresetId === 'high-competitive') {
+          preset = 'P3 / P4 (Performance) — prioriza FPS do jogo';
+        } else if (gpuTier === 'high' && cpuTier === 'high') {
+          preset = 'P6 / P7 (High Quality)';
+        } else if (gpuTier === 'high') {
+          preset = 'P5 / P6 (Quality)';
+        } else if (gpuTier === 'mid') {
+          preset = 'P4 / P5 (Medium / Quality)';
+        } else {
+          preset = 'P3 / P4 (Performance)';
+        }
+        if (heavyGames && gpuTier !== 'high' && activePresetId !== 'high-competitive') {
+          preset = 'P3 / P4 (Performance) — prioriza o jogo';
+        }
+      }
+
+      let audioBitrate = '160 Kbps';
+      if (format === 'recording' || gpuTier === 'high') audioBitrate = '320 Kbps';
+      else if (bitrate >= 5000) audioBitrate = '192 Kbps';
+
+      // Alerts
+      const alerts = [];
+      let alertLevel = 'ok';
+
+      if (format === 'dual' && vtuber && gpuTier !== 'high') {
+        alerts.push('⚠️ <strong>Aviso de Gargalo de VRAM:</strong> Rodar Dual Canvas + VTube Studio em uma GPU com menos de 12GB de VRAM pode causar quedas severas de render no OBS. Recomendamos usar Canvas Único ou limitar o jogo a 60 FPS.');
+        alertLevel = 'danger';
+      }
+      if (format === 'dual' && gpuTier === 'entry') {
+        alerts.push('Dual Canvas em GPU de entrada é altamente desaconselhado. Prefira um único canvas 16:9 ou 9:16.');
+        alertLevel = 'danger';
+      }
+      if (vtuber && heavyGames && gpuTier !== 'high') {
+        alerts.push('VTube Studio + jogos atuais exigem bastante VRAM e CPU. Considere reduzir a qualidade do avatar ou o preset do encoder.');
+        if (alertLevel !== 'danger') alertLevel = 'warn';
+      }
+      if (availableMbps < 6) {
+        alerts.push(`Seu upload efetivo (~${availableMbps.toFixed(1)} Mbps) é baixo. A configuração foi forçada para 720p para evitar buffering nos espectadores.`);
+        if (alertLevel === 'ok') alertLevel = 'warn';
+      }
+      if (encoder.startsWith('x264') && cpuTier === 'entry') {
+        alerts.push('Você está usando encoding por software (x264) em um processador de entrada. O preset ultrafast ajuda, mas o jogo pode sofrer perda de FPS. Considere uma GPU dedicada com NVENC/AMF.');
+        if (alertLevel === 'ok') alertLevel = 'warn';
+      }
+      if (ram === 8) {
+        alerts.push('Com 8 GB de RAM o sistema pode ficar instável com navegador + OBS + jogo + VTube Studio. Feche abas desnecessárias e considere upgrade.');
+        if (alertLevel === 'ok') alertLevel = 'warn';
+      }
+      if (alerts.length === 0) {
+        alerts.push('✅ Hardware e conexão parecem adequados para a configuração sugerida. Monitore o uso de GPU/CPU no OBS durante a live.');
+        alertLevel = 'ok';
+      }
+
+      // Tips dinâmicas
+      const tips = [];
+      if (encoder.includes('NVENC')) tips.push('No OBS, escolha “NVIDIA NVENC H.264 (new)” e deixe Look-ahead / Psycho Visual Tuning ligados se a GPU aguentar.');
+      if (encoder.includes('x264')) tips.push('Feche Chrome e apps pesados. x264 come CPU — priorize o jogo e o OBS.');
+      if (vtuber) tips.push('No VTube Studio, baixe a resolução do modelo e desative efeitos extras se estiver dropando frame.');
+      if (format === 'dual') tips.push('Considere usar o plugin “Downstream Keyer” ou uma segunda instância do OBS só pro vertical.');
+      if (fps === 30) tips.push('30 FPS ainda fica ótimo pra conversa e muitos jogos. Priorize estabilidade.');
+      if (bitrate <= 3500) tips.push('Bitrate baixo: evite cenas muito movimentadas e overlays com partículas.');
+      if (format === 'recording') tips.push('Na gravação você pode usar CQP/CRF em vez de CBR pra qualidade mais consistente.');
+      if (tips.length === 0) tips.push('Depois de aplicar, faça um teste de 5–10 min e olhe o painel de Estatísticas do OBS.');
+
+      tipsList.innerHTML = tips.map(t => `<li>${t}</li>`).join('');
+      tipsCard.classList.remove('hidden');
+
+      // UI outputs
+      outputs.encoder.textContent      = encoder;
+      outputs.rateControl.textContent  = 'CBR';
+      outputs.bitrate.textContent      = `${bitrate} Kbps`;
+      outputs.keyframe.textContent     = '2s';
+      outputs.preset.textContent       = preset;
+      outputs.baseRes.textContent      = baseRes;
+      outputs.outputRes.textContent    = outputRes;
+      outputs.fps.textContent          = `${fps} FPS`;
+      outputs.audioBitrate.textContent = audioBitrate;
+      outputs.sampleRate.textContent   = '48 kHz';
+
+      alertCard.classList.remove('hidden', 'bg-emerald-950/60', 'border-emerald-700/50', 'bg-amber-950/60', 'border-amber-600/50', 'bg-red-950/60', 'border-red-600/50', 'alert-pulse');
+      if (alertLevel === 'ok') {
+        alertCard.classList.add('bg-emerald-950/60', 'border-emerald-700/50');
+        alertIcon.textContent = '✅'; alertTitle.textContent = 'Tudo certo';
+      } else if (alertLevel === 'warn') {
+        alertCard.classList.add('bg-amber-950/60', 'border-amber-600/50');
+        alertIcon.textContent = '⚠️'; alertTitle.textContent = 'Atenção';
+      } else {
+        alertCard.classList.add('bg-red-950/60', 'border-red-600/50', 'alert-pulse');
+        alertIcon.textContent = '🚨'; alertTitle.textContent = 'Risco de Gargalo';
+      }
+      alertMessage.innerHTML = alerts.join('<br><br>');
+
+      currentConfig = {
+        encoder, rateControl: 'CBR', bitrate: `${bitrate} Kbps`, keyframe: '2s', preset,
+        baseRes, outputRes, fps: `${fps} FPS`, audioBitrate, sampleRate: '48 kHz',
+        format: inputs.format.options[inputs.format.selectedIndex].text,
+        upload: `${uploadMbps} Mbps (efetivo ~${availableMbps.toFixed(1)} Mbps)`,
+        notes: alerts.map(a => a.replace(/<[^>]+>/g, '')).join('\n'),
+        presetName: activePresetId ? activeName.textContent : null,
+      };
+    }
+
+    // ============================================================
+    // COPIAR / COMPARTILHAR / SALVAR
+    // ============================================================
+    function buildSummaryText() {
+      if (!currentConfig.encoder) calculate();
+      const c = currentConfig;
+      return `
+═══════════════════════════════════════
+  OBS CONFIG CALCULATOR — RESUMO
+═══════════════════════════════════════
+${c.presetName ? `Preset: ${c.presetName}\n` : ''}
+▶ ENCODER
+  Codificador:          ${c.encoder}
+  Controle de Taxa:     ${c.rateControl}
+  Bitrate de Vídeo:     ${c.bitrate}
+  Intervalo Keyframe:   ${c.keyframe}
+  Preset:               ${c.preset}
+
+▶ VÍDEO
+  Resolução Base:       ${c.baseRes}
+  Resolução de Saída:   ${c.outputRes}
+  FPS:                  ${c.fps}
+
+▶ ÁUDIO
+  Bitrate:              ${c.audioBitrate}
+  Sample Rate:          ${c.sampleRate}
+
+▶ CONTEXTO
+  Formato:              ${c.format}
+  Upload informado:     ${c.upload}
+
+▶ AVISOS
+${c.notes}
+
+───────────────────────────────────────
+Gerado por OBS Config & Scene Calculator
+Não substitui testes reais no OBS.
+`.trim();
+    }
+
+    function copySummary() {
+      const text = buildSummaryText();
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtnText.textContent = 'Copiado! ✓';
+        copyBtn.classList.add('bg-emerald-800', 'border-emerald-600');
+        toast('Resumo copiado pro clipboard');
+        track('config_copied');
+        setTimeout(() => {
+          copyBtnText.textContent = 'Copiar Resumo';
+          copyBtn.classList.remove('bg-emerald-800', 'border-emerald-600');
+        }, 2000);
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('Resumo copiado');
+      });
+    }
+
+    function shareConfig() {
+      const text = buildSummaryText();
+      if (navigator.share) {
+        navigator.share({
+          title: 'Minha config do OBS',
+          text: text,
+        }).then(() => track('config_shared')).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(text).then(() => {
+          toast('Resumo copiado (compartilhar não disponível)');
+          track('config_shared_fallback');
+        });
+      }
+    }
+
+    function saveConfig() {
+      const data = {
+        gpuVendor: inputs.gpuVendor.value,
+        gpuTier: inputs.gpuTier.value,
+        cpuTier: inputs.cpuTier.value,
+        ram: inputs.ram.value,
+        upload: inputs.upload.value,
+        format: inputs.format.value,
+        vtuber: inputs.vtuber.checked,
+        heavyGames: inputs.heavyGames.checked,
+        activePresetId,
+        currentTier,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem('obs_config_calculator', JSON.stringify(data));
+      loadSavedBtn.classList.remove('hidden');
+      toast('Configuração salva neste navegador');
+      track('config_saved');
+    }
+
+    function loadSavedConfig() {
+      try {
+        const raw = localStorage.getItem('obs_config_calculator');
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        inputs.gpuVendor.value = data.gpuVendor || 'nvidia';
+        inputs.gpuTier.value   = data.gpuTier || 'mid';
+        inputs.cpuTier.value   = data.cpuTier || 'mid';
+        inputs.ram.value       = data.ram || '16';
+        inputs.upload.value    = data.upload || 20;
+        inputs.format.value    = data.format || 'horizontal';
+        inputs.vtuber.checked  = !!data.vtuber;
+        inputs.heavyGames.checked = !!data.heavyGames;
+        activePresetId = data.activePresetId || null;
+        currentTier = data.currentTier || 'mid';
+
+        if (activePresetId) {
+          const all = [...PRESETS.weak, ...PRESETS.mid, ...PRESETS.high];
+          const found = all.find(p => p.id === activePresetId);
+          if (found) {
+            activeBadge.classList.remove('hidden');
+            activeName.textContent = `${found.icon} ${found.title}`;
+          } else {
+            activePresetId = null;
+            activeBadge.classList.add('hidden');
+          }
+        } else {
+          activeBadge.classList.add('hidden');
+        }
+
+        renderPresets(currentTier);
+        calculate();
+        toast('Configuração carregada');
+        track('config_loaded');
+      } catch (e) {
+        toast('Não foi possível carregar a config salva');
+      }
+    }
+
+    // ============================================================
+    // GERADOR DE PERFIL OBS (basic.ini + streamEncoder.json + zip)
+    // Baseado na estrutura oficial de perfis do OBS Studio
+    // ============================================================
+
+    function getEncoderIds(gpuVendor) {
+      // IDs usados pelo OBS 28+ (texture path)
+      switch (gpuVendor) {
+        case 'nvidia': return { stream: 'obs_nvenc_h264_tex', rec: 'obs_nvenc_h264_tex', simple: 'nvenc_h264' };
+        case 'amd':    return { stream: 'h264_texture_amf',   rec: 'h264_texture_amf',   simple: 'amd' };
+        case 'intel':  return { stream: 'obs_qsv11_v2',       rec: 'obs_qsv11_v2',       simple: 'qsv' };
+        default:       return { stream: 'obs_x264',           rec: 'obs_x264',           simple: 'x264' };
+      }
+    }
+
+    function mapNvencPreset(label) {
+      // Converte texto amigável → valor do JSON do OBS
+      if (!label) return 'p5';
+      const l = label.toLowerCase();
+      if (l.includes('p7') || l.includes('p6')) return 'p6';
+      if (l.includes('p5')) return 'p5';
+      if (l.includes('p4') || l.includes('p3')) return 'p4';
+      if (l.includes('performance')) return 'p4';
+      return 'p5';
+    }
+
+    function mapX264Preset(label) {
+      if (!label) return 'veryfast';
+      const l = label.toLowerCase();
+      if (l.includes('ultrafast')) return 'ultrafast';
+      if (l.includes('superfast')) return 'superfast';
+      if (l.includes('veryfast')) return 'veryfast';
+      if (l.includes('faster')) return 'faster';
+      return 'veryfast';
+    }
+
+    function parseRes(str) {
+      // "1920x1080" → { w: 1920, h: 1080 }
+      const m = String(str || '1920x1080').match(/(\d+)\s*[x×]\s*(\d+)/i);
+      return m ? { w: parseInt(m[1], 10), h: parseInt(m[2], 10) } : { w: 1920, h: 1080 };
+    }
+
+    function parseBitrateKbps(str) {
+      const n = parseInt(String(str || '6000').replace(/[^\d]/g, ''), 10);
+      return isNaN(n) ? 6000 : n;
+    }
+
+    function parseAudioKbps(str) {
+      const n = parseInt(String(str || '160').replace(/[^\d]/g, ''), 10);
+      return isNaN(n) ? 160 : n;
+    }
+
+    function parseFps(str) {
+      const n = parseInt(String(str || '60').replace(/[^\d]/g, ''), 10);
+      return isNaN(n) ? 60 : n;
+    }
+
+    function buildStreamEncoderJson(gpuVendor, bitrate, presetLabel) {
+      if (gpuVendor === 'nvidia') {
+        return {
+          rate_control: 'CBR',
+          bitrate: bitrate,
+          keyint_sec: 2,
+          preset: mapNvencPreset(presetLabel),
+          profile: 'high',
+          tune: 'hq',
+          multipass: 'qres',
+          lookahead: false,
+          psycho_aq: true,
+          bf: 2,
+          gpu: 0,
+        };
+      }
+      if (gpuVendor === 'amd') {
+        return {
+          rate_control: 'CBR',
+          bitrate: bitrate,
+          keyint_sec: 2,
+          preset: 'quality',
+          profile: 'high',
+          bf: 0,
+        };
+      }
+      if (gpuVendor === 'intel') {
+        return {
+          rate_control: 'CBR',
+          bitrate: bitrate,
+          keyint_sec: 2,
+          target_usage: 'TU4',
+          profile: 'high',
+          bframes: 3,
+        };
+      }
+      // x264
+      return {
+        rate_control: 'CBR',
+        bitrate: bitrate,
+        keyint_sec: 2,
+        preset: mapX264Preset(presetLabel),
+        profile: 'high',
+        tune: 'zerolatency',
+        x264opts: '',
+      };
+    }
+
+    function buildRecordEncoderJson(gpuVendor) {
+      // Gravação local: CQP/CRF pra qualidade constante
+      if (gpuVendor === 'nvidia') {
+        return {
+          rate_control: 'CQP',
+          cqp: 18,
+          keyint_sec: 2,
+          preset: 'p5',
+          profile: 'high',
+          tune: 'hq',
+          multipass: 'qres',
+          lookahead: false,
+          psycho_aq: true,
+          bf: 2,
+          gpu: 0,
+        };
+      }
+      if (gpuVendor === 'amd') {
+        return {
+          rate_control: 'CQP',
+          cqp: 18,
+          keyint_sec: 2,
+          preset: 'quality',
+          profile: 'high',
+        };
+      }
+      if (gpuVendor === 'intel') {
+        return {
+          rate_control: 'ICQ',
+          icq_quality: 18,
+          keyint_sec: 2,
+          target_usage: 'TU4',
+          profile: 'high',
+        };
+      }
+      return {
+        rate_control: 'CRF',
+        crf: 18,
+        keyint_sec: 2,
+        preset: 'veryfast',
+        profile: 'high',
+        tune: '',
+      };
+    }
+
+    function buildBasicIni({ profileName, base, output, fps, bitrate, audioBitrate, encoderIds, format }) {
+      // Perfil enxuto e compatível com OBS 28–31+
+      // Não inclui stream key nem caminhos absolutos de usuário
+      const isRecordingOnly = format === 'recording';
+
+      return `[General]
+Name=${profileName}
+
+[Output]
+Mode=Advanced
+FilenameFormatting=%CCYY-%MM-%DD %hh-%mm-%ss
+DelayEnable=false
+DelaySec=1
+DelayPreserve=true
+Reconnect=true
+RetryDelay=2
+MaxRetries=25
+BindIP=default
+IPFamily=IPv4+IPv6
+NewSocketLoopEnable=false
+LowLatencyEnable=false
+
+[Stream1]
+IgnoreRecommended=false
+
+[SimpleOutput]
+VBitrate=${bitrate}
+ABitrate=${audioBitrate}
+UseAdvanced=false
+Preset=veryfast
+NVENCPreset2=p5
+RecQuality=Stream
+RecRB=true
+RecRBTime=20
+RecRBSize=512
+RecRBPrefix=Replay
+StreamAudioEncoder=aac
+RecAudioEncoder=aac
+RecTracks=1
+StreamEncoder=${encoderIds.simple}
+RecEncoder=${encoderIds.simple}
+
+[AdvOut]
+ApplyServiceSettings=true
+UseRescale=false
+TrackIndex=1
+VodTrackIndex=2
+Encoder=${encoderIds.stream}
+RecType=Standard
+RecFormat2=mkv
+RecUseRescale=false
+RecTracks=1
+RecEncoder=${encoderIds.rec}
+FLVTrack=1
+StreamMultiTrackAudioMixes=1
+FFOutputToFile=true
+FFVBitrate=${bitrate}
+FFVGOPSize=120
+FFUseRescale=false
+FFIgnoreCompat=false
+FFABitrate=${audioBitrate}
+FFAudioMixes=1
+Track1Bitrate=${audioBitrate}
+Track2Bitrate=${audioBitrate}
+Track3Bitrate=160
+Track4Bitrate=160
+Track5Bitrate=160
+Track6Bitrate=160
+RecSplitFileTime=15
+RecSplitFileSize=2048
+RecRB=true
+RecRBTime=120
+RecRBSize=512
+AudioEncoder=ffmpeg_aac
+RecAudioEncoder=ffmpeg_aac
+RecSplitFileType=Time
+
+[Video]
+BaseCX=${base.w}
+BaseCY=${base.h}
+OutputCX=${output.w}
+OutputCY=${output.h}
+FPSType=0
+FPSCommon=${fps}
+FPSInt=${fps}
+FPSNum=${fps}
+FPSDen=1
+ScaleType=bicubic
+ColorFormat=NV12
+ColorSpace=709
+ColorRange=Partial
+SdrWhiteLevel=300
+HdrNominalPeakLevel=1000
+
+[Audio]
+SampleRate=48000
+ChannelSetup=Stereo
+MeterDecayRate=23.53
+PeakMeterType=0
+`;
+    }
+
+    function buildImportReadme(profileName) {
+      return `COMO IMPORTAR ESTE PERFIL NO OBS STUDIO
+========================================
+
+Perfil gerado por: OBS Config & Scene Calculator
+Nome do perfil: ${profileName}
+
+MÉTODO 1 — Import pelo menu (recomendado)
+1. Abra o OBS Studio
+2. No menu superior: Perfil (Profile) → Importar (Import)
+3. Selecione a PASTA "${profileName}" (não o zip em si —
+   extraia o .zip primeiro se necessário)
+4. O perfil aparece na lista. Selecione-o.
+
+MÉTODO 2 — Copiar manualmente
+Windows:
+  %APPDATA%\\obs-studio\\basic\\profiles\\
+macOS:
+  ~/Library/Application Support/obs-studio/basic/profiles/
+Linux:
+  ~/.config/obs-studio/basic/profiles/
+
+Cole a pasta "${profileName}" dentro de "profiles" e reinicie o OBS.
+
+O QUE ESTE PERFIL CONTÉM
+- basic.ini ........ resolução, FPS, modo Avançado, encoder
+- streamEncoder.json  bitrate CBR, keyframe 2s, preset
+- recordEncoder.json  gravação em CQP/CRF (qualidade local)
+
+NÃO INCLUI
+- Chave de stream / conta Twitch/YouTube (conecte a sua)
+- Cenas e fontes (use Coleção de Cenas separada)
+- Caminhos de gravação (ajuste em Configurações → Saída)
+
+DEPOIS DE IMPORTAR
+1. Configurações → Transmissão → conecte sua conta ou cole a chave
+2. Configurações → Saída → confira o caminho de gravação
+3. Faça um teste de 5–10 minutos e olhe Estatísticas (FPS / encoding)
+
+Gerado automaticamente — revise antes de ir ao vivo.
+`;
+    }
+
+    async function downloadObsProfile() {
+      if (!currentConfig.encoder) calculate();
+
+      const gpuVendor = inputs.gpuVendor.value;
+      const format = inputs.format.value;
+      const bitrate = parseBitrateKbps(currentConfig.bitrate);
+      const audioBitrate = parseAudioKbps(currentConfig.audioBitrate);
+      const fps = parseFps(currentConfig.fps);
+      const base = parseRes(currentConfig.baseRes);
+      const output = parseRes(currentConfig.outputRes);
+      const encoderIds = getEncoderIds(gpuVendor);
+      const presetLabel = currentConfig.preset || '';
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      const profileName = `OCC_${stamp}_${output.w}x${output.h}_${fps}fps`.replace(/\s+/g, '_');
+
+      const basicIni = buildBasicIni({
+        profileName, base, output, fps, bitrate, audioBitrate, encoderIds, format,
+      });
+      const streamEnc = JSON.stringify(buildStreamEncoderJson(gpuVendor, bitrate, presetLabel), null, 2);
+      const recordEnc = JSON.stringify(buildRecordEncoderJson(gpuVendor), null, 2);
+      const readme = buildImportReadme(profileName);
+
+      try {
+        if (typeof JSZip === 'undefined') {
+          toast('JSZip não carregou. Recarregue a página.');
+          return;
+        }
+
+        downloadProfileText.textContent = 'Gerando...';
+        downloadProfileBtn.disabled = true;
+
+        const zip = new JSZip();
+        const folder = zip.folder(profileName);
+        folder.file('basic.ini', basicIni);
+        folder.file('streamEncoder.json', streamEnc);
+        folder.file('recordEncoder.json', recordEnc);
+        folder.file('COMO_IMPORTAR.txt', readme);
+
+        // Resumo legível também na raiz do zip
+        zip.file('resumo_config.txt', buildSummaryText());
+
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${profileName}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        toast('Perfil OBS baixado! Extraia e importe no OBS.');
+        track('profile_downloaded', {
+          encoder: encoderIds.stream,
+          res: `${output.w}x${output.h}`,
+          fps,
+          bitrate,
+        });
+      } catch (err) {
+        console.error(err);
+        toast('Erro ao gerar o ZIP. Tente de novo.');
+      } finally {
+        downloadProfileText.textContent = 'Baixar Perfil OBS (.zip)';
+        downloadProfileBtn.disabled = false;
+      }
+    }
+
+    // ============================================================
+    // EVENTOS
+    // ============================================================
+    Object.values(inputs).forEach(el => {
+      el.addEventListener('change', () => {
+        activePresetId = null;
+        activeBadge.classList.add('hidden');
+        renderPresets(currentTier);
+        calculate();
+      });
+      el.addEventListener('input', () => {
+        activePresetId = null;
+        activeBadge.classList.add('hidden');
+        calculate();
+      });
+    });
+
+    generateBtn.addEventListener('click', () => { calculate(); track('generate_clicked'); });
+    copyBtn.addEventListener('click', copySummary);
+    shareBtn.addEventListener('click', shareConfig);
+    saveBtn.addEventListener('click', saveConfig);
+    loadSavedBtn.addEventListener('click', loadSavedConfig);
+    downloadProfileBtn?.addEventListener('click', downloadObsProfile);
+
+    // Modal de instruções do perfil
+    const profileHelpModal = $('profileHelpModal');
+    const openProfileHelp = () => {
+      if (!profileHelpModal) return;
+      profileHelpModal.classList.remove('hidden');
+      profileHelpModal.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+      track('profile_help_opened');
+    };
+    const closeProfileHelp = () => {
+      if (!profileHelpModal) return;
+      profileHelpModal.classList.add('hidden');
+      profileHelpModal.classList.remove('flex');
+      document.body.style.overflow = '';
+    };
+
+    $('profileHelpBtn')?.addEventListener('click', openProfileHelp);
+    $('profileHelpClose')?.addEventListener('click', closeProfileHelp);
+    $('profileHelpClose2')?.addEventListener('click', closeProfileHelp);
+    $('profileHelpBackdrop')?.addEventListener('click', closeProfileHelp);
+    $('profileHelpDownload')?.addEventListener('click', () => {
+      closeProfileHelp();
+      downloadObsProfile();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && profileHelpModal && !profileHelpModal.classList.contains('hidden')) {
+        closeProfileHelp();
+      }
+    });
+
+    // ---------- Tabs (Calculadora / Cenas) ----------
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.app-tab').forEach(t => {
+        t.classList.remove('active', 'border-obs-500', 'text-white');
+        t.classList.add('border-transparent', 'text-slate-400');
+      });
+      const panel = document.getElementById('tab-' + tabId);
+      if (panel) panel.classList.remove('hidden');
+      const btn = document.querySelector(`.app-tab[data-tab="${tabId}"]`);
+      if (btn) {
+        btn.classList.add('active', 'border-obs-500', 'text-white');
+        btn.classList.remove('border-transparent', 'text-slate-400');
+      }
+      track('tab_switched', { tab: tabId });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    document.querySelectorAll('.app-tab').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // ---------- Montador de cenas (checklist → JSON) ----------
+    function uuid() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    }
+
+    function baseSourceProps() {
+      return {
+        prev_ver: 520093696,
+        mixers: 0, sync: 0, flags: 0, volume: 1.0, balance: 0.5,
+        enabled: true, muted: false, 'push-to-mute': false, 'push-to-mute-delay': 0,
+        'push-to-talk': false, 'push-to-talk-delay': 0, hotkeys: {},
+        deinterlace_mode: 0, deinterlace_field_order: 0, monitoring_type: 0,
+        private_settings: {},
+      };
+    }
+
+    function makeImagePlaceholder(name) {
+      return {
+        ...baseSourceProps(),
+        name, uuid: uuid(),
+        id: 'image_source', versioned_id: 'image_source',
+        settings: { file: '', unload: true },
+      };
+    }
+
+    function makeTextSource(name, text) {
+      return {
+        ...baseSourceProps(),
+        name, uuid: uuid(),
+        id: 'text_gdiplus', versioned_id: 'text_gdiplus_v3',
+        settings: {
+          text: text || '',
+          font: { face: 'Arial', flags: 1, size: 64, style: 'Bold' },
+          align: 'center', valign: 'center', bk_opacity: 0,
+          color: 4294967295,
+        },
+      };
+    }
+
+    function makeGameCapture(name, allowTransparency) {
+      return {
+        ...baseSourceProps(),
+        name, uuid: uuid(),
+        id: 'game_capture', versioned_id: 'game_capture',
+        mixers: 255,
+        settings: { capture_mode: 'any_fullscreen', allow_transparency: !!allowTransparency },
+        hotkeys: { 'libobs.mute': [], 'libobs.unmute': [], hotkey_start: [], hotkey_stop: [] },
+      };
+    }
+
+    function makeWindowCapture(name) {
+      return {
+        ...baseSourceProps(),
+        name, uuid: uuid(),
+        id: 'window_capture', versioned_id: 'window_capture',
+        mixers: 255,
+        settings: { cursor: true },
+        hotkeys: { 'libobs.mute': [], 'libobs.unmute': [] },
+      };
+    }
+
+    function makeWebcamPlaceholder(name) {
+      return {
+        ...baseSourceProps(),
+        name, uuid: uuid(),
+        id: 'dshow_input', versioned_id: 'dshow_input',
+        mixers: 255,
+        settings: { video_device_id: 'default', resolution: '1920x1080', last_resolution: '1920x1080' },
+        hotkeys: { 'libobs.mute': [], 'libobs.unmute': [] },
+      };
+    }
+
+    function makeBrowserPlaceholder(name) {
+      return {
+        ...baseSourceProps(),
+        name, uuid: uuid(),
+        id: 'browser_source', versioned_id: 'browser_source',
+        mixers: 255,
+        settings: {
+          url: 'https://',
+          width: 1920,
+          height: 1080,
+          css: 'body { background-color: rgba(0,0,0,0); margin: 0; overflow: hidden; }',
+        },
+        hotkeys: { 'libobs.mute': [], 'libobs.unmute': [], 'ObsBrowser.Refresh': [] },
+      };
+    }
+
+    function makeSceneItem(ref, id) {
+      return {
+        name: ref.name,
+        source_uuid: ref.uuid,
+        visible: true,
+        locked: false,
+        rot: 0.0,
+        scale_ref: { x: 1920.0, y: 1080.0 },
+        align: 5,
+        bounds_type: 2,
+        bounds_align: 0,
+        bounds_crop: false,
+        crop_left: 0, crop_top: 0, crop_right: 0, crop_bottom: 0,
+        id,
+        group_item_backup: false,
+        pos: ref.pos || { x: 0.0, y: 0.0 },
+        pos_rel: { x: 0.0, y: 0.0 },
+        scale: { x: 1.0, y: 1.0 },
+        scale_rel: { x: 1.0, y: 1.0 },
+        bounds: ref.bounds || { x: 1920.0, y: 1080.0 },
+        bounds_rel: { x: 1.0, y: 1.0 },
+        scale_filter: 'disable',
+        blend_method: 'default',
+        blend_type: 'normal',
+        show_transition: { duration: 0 },
+        hide_transition: { duration: 0 },
+        private_settings: {},
+      };
+    }
+
+    function makeScene(name, itemRefs) {
+      const items = itemRefs.map((ref, i) => makeSceneItem(ref, i + 1));
+      return {
+        ...baseSourceProps(),
+        name, uuid: uuid(),
+        id: 'scene', versioned_id: 'scene',
+        settings: { custom_size: false, id_counter: items.length, items },
+        hotkeys: { 'OBSBasic.SelectScene': [] },
+      };
+    }
+
+    const SCENE_DEFS = {
+      start: { label: '01 Início da live', txt: 'txt-start', kind: 'static' },
+      brb:   { label: '02 Volto já',       txt: 'txt-brb',   kind: 'static' },
+      main:  { label: '03 Principal',      txt: 'txt-main',  kind: 'main' },
+      chat:  { label: '04 Só conversa',    txt: 'txt-chat',  kind: 'talk' },
+      react: { label: '05 React',          txt: 'txt-react', kind: 'react' },
+      end:   { label: '99 Tchau',          txt: 'txt-end',   kind: 'static' },
+    };
+
+    function getAppearMode() {
+      const el = document.querySelector('input[name="appearMode"]:checked');
+      return el ? el.value : 'webcam';
+    }
+
+    function buildCustomSceneCollection() {
+      const colName = ($('sceneColName')?.value || 'Minha Live').trim() || 'Minha Live';
+      const picked = [...document.querySelectorAll('.scene-pick:checked')].map(el => el.dataset.scene);
+      if (picked.length === 0) {
+        toast('Marque pelo menos uma cena');
+        return null;
+      }
+
+      const mode = getAppearMode(); // webcam | vtuber
+      const wantChatBrowser = $('optChatBrowser')?.checked;
+      const wantOverlay = $('optOverlayBrowser')?.checked;
+
+      const sources = [];
+      const sceneOrder = [];
+      let firstSceneName = null;
+
+      // Fontes compartilhadas
+      let personSrc = null;
+      if (mode === 'vtuber') {
+        personSrc = makeGameCapture('Avatar / VTuber (configure + transparência)', true);
+      } else {
+        personSrc = makeWebcamPlaceholder('Webcam (escolha o dispositivo)');
+      }
+      sources.push(personSrc);
+
+      let gameSrc = makeGameCapture('Captura de jogo (configure a janela)', false);
+      sources.push(gameSrc);
+
+      let windowSrc = makeWindowCapture('Captura de janela / React (escolha a janela)');
+      sources.push(windowSrc);
+
+      let chatBrowser = null;
+      let overlayBrowser = null;
+      if (wantChatBrowser) {
+        chatBrowser = makeBrowserPlaceholder('Navegador — Chat / Alertas (cole a URL)');
+        sources.push(chatBrowser);
+      }
+      if (wantOverlay) {
+        overlayBrowser = makeBrowserPlaceholder('Navegador — Overlay HTML (cole a URL)');
+        sources.push(overlayBrowser);
+      }
+
+      // Layout helpers
+      const full = { bounds: { x: 1920, y: 1080 }, pos: { x: 0, y: 0 } };
+      const personCorner = { bounds: { x: 420, y: 315 }, pos: { x: 1460, y: 720 } };
+      const personBig = { bounds: { x: 720, y: 540 }, pos: { x: 1100, y: 270 } };
+      const textCenter = { bounds: { x: 1600, y: 240 }, pos: { x: 160, y: 420 } };
+
+      picked.forEach(key => {
+        const def = SCENE_DEFS[key];
+        if (!def) return;
+        const items = [];
+
+        // Cenário (imagem) — sempre útil em static/talk; também atrás do main/react
+        const img = makeImagePlaceholder(`Cenário — ${def.label}`);
+        sources.push(img);
+        items.push({ name: img.name, uuid: img.uuid, ...full });
+
+        if (def.kind === 'main') {
+          items.push({ name: gameSrc.name, uuid: gameSrc.uuid, ...full });
+          items.push({ name: personSrc.name, uuid: personSrc.uuid, ...personCorner });
+        } else if (def.kind === 'talk') {
+          items.push({ name: personSrc.name, uuid: personSrc.uuid, ...personBig });
+        } else if (def.kind === 'react') {
+          items.push({ name: windowSrc.name, uuid: windowSrc.uuid, ...full });
+          items.push({ name: personSrc.name, uuid: personSrc.uuid, ...personCorner });
+        }
+
+        // Texto (se preenchido)
+        const txtVal = ($(def.txt)?.value || '').trim();
+        if (txtVal) {
+          const txt = makeTextSource(`Texto — ${def.label}`, txtVal);
+          sources.push(txt);
+          items.push({ name: txt.name, uuid: txt.uuid, ...textCenter });
+        }
+
+        // Chat/alertas e overlay nas cenas “vivas”
+        if (chatBrowser && (def.kind === 'main' || def.kind === 'talk' || def.kind === 'react')) {
+          items.push({
+            name: chatBrowser.name, uuid: chatBrowser.uuid,
+            bounds: { x: 400, y: 600 }, pos: { x: 20, y: 200 },
+          });
+        }
+        if (overlayBrowser && (def.kind === 'main' || def.kind === 'talk' || def.kind === 'react')) {
+          items.push({ name: overlayBrowser.name, uuid: overlayBrowser.uuid, ...full });
+        }
+
+        const scene = makeScene(def.label, items);
+        sources.push(scene);
+        sceneOrder.push({ name: scene.name });
+        if (!firstSceneName) firstSceneName = scene.name;
+      });
+
+      return {
+        name: colName,
+        current_scene: firstSceneName,
+        current_program_scene: firstSceneName,
+        current_transition: 'Esmaecer',
+        transition_duration: 300,
+        preview_locked: false,
+        scaling_enabled: false,
+        scaling_level: 0,
+        scaling_off_x: 0.0,
+        scaling_off_y: 0.0,
+        groups: [],
+        scene_order: sceneOrder,
+        transitions: [
+          { name: 'Esmaecer', id: 'fade_transition', settings: {} },
+          { name: 'Cortar', id: 'cut_transition', settings: {} },
+        ],
+        quick_transitions: [
+          { name: 'Cortar', duration: 300, hotkeys: [], id: 1, fade_to_black: false },
+          { name: 'Esmaecer', duration: 300, hotkeys: [], id: 2, fade_to_black: false },
+        ],
+        sources,
+        modules: {
+          'auto-scene-switcher': { interval: 300, non_matching_scene: '', switch_if_not_matching: false, active: false, switches: [] },
+          captions: { source: '', enabled: false, lang_id: 1046, provider: 'mssapi' },
+          'output-timer': {
+            streamTimerHours: 0, streamTimerMinutes: 0, streamTimerSeconds: 30,
+            recordTimerHours: 0, recordTimerMinutes: 0, recordTimerSeconds: 30,
+            autoStartStreamTimer: false, autoStartRecordTimer: false, pauseRecordTimer: true,
+          },
+          'scripts-tool': [],
+        },
+      };
+    }
+
+    function downloadCustomScenes() {
+      const data = buildCustomSceneCollection();
+      if (!data) return;
+      const safeName = data.name.replace(/[^\w\s\-à-úÀ-Ú]/gi, '').trim().replace(/\s+/g, '_') || 'OCC_Cenas';
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeName}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast('Coleção gerada! Importe em Coleção de Cenas → Importar');
+      track('scene_builder_download', {
+        mode: getAppearMode(),
+        scenes: data.scene_order.map(s => s.name).join(','),
+        count: data.scene_order.length,
+      });
+    }
+
+    // Lápis: mostra/esconde input de texto da cena
+    document.querySelectorAll('.pencil-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const input = document.getElementById(btn.dataset.for);
+        if (!input) return;
+        input.classList.toggle('hidden');
+        if (!input.classList.contains('hidden')) {
+          input.focus();
+          input.select();
+        }
+      });
+    });
+
+    $('buildScenesBtn')?.addEventListener('click', downloadCustomScenes);
+
+
+    document.querySelectorAll('.tier-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        activePresetId = null;
+        activeBadge.classList.add('hidden');
+        renderPresets(tab.dataset.tier);
+        track('tier_selected', { tier: tab.dataset.tier });
+      });
+    });
+
+    // PIX placeholder feedback
+    $('pixBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      toast('Substitua o link do PIX pelo seu (chave ou QR)');
+    });
+    $('livepixBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      toast('Substitua pelo seu link LivePix / membro');
+    });
+
+    // Init
+    if (localStorage.getItem('obs_config_calculator')) {
+      loadSavedBtn.classList.remove('hidden');
+    }
+    renderPresets('weak');
+    calculate();
+    track('page_view');
+  </script>
+</body>
+</html>
