@@ -6,7 +6,7 @@ Ferramenta criada por **Yonasan** ([YouTube](https://www.youtube.com/@YonasanEri
 
 ## 1. Visão geral
 
-Página única (`index.html`) que ajuda iniciantes a configurar o **OBS Studio**:
+Ferramenta em página estática (`index.html` + `css/` + `js/`) que ajuda iniciantes a configurar o **OBS Studio**:
 
 1. **Preset de configurações:** gera valores recomendados (resolução, FPS, encoder, bitrate, etc.) e um **perfil do OBS** para importar.
 2. **Coleção de cenas (Beta):** gera um arquivo **.json** com cenas e fontes básicas para importar no OBS.
@@ -73,7 +73,9 @@ Depois de importar, é preciso apontar imagens, webcam, jogo/janela e o **microf
 
 ---
 
-## 5. Termos de uso (resumo)
+## 5. Termos de uso e beta
+
+A página inclui aviso de **beta/hobby**, FAQ ampliado e modal de **Termos de Uso** (rodapé e FAQ). Resumo:
 
 - Uso **gratuito**, sem cadastro.
 - Os arquivos gerados são um **ponto de partida**, oferecidos "como estão", sem garantia de resultado em todos os PCs. Teste antes de ir ao vivo.
@@ -85,19 +87,34 @@ Depois de importar, é preciso apontar imagens, webcam, jogo/janela e o **microf
 
 ## 6. Estrutura do projeto
 
+```
+obs-config-scene-calculator/
+├── index.html              # Markup + Tailwind config + links de CSS/JS
+├── css/
+│   └── styles.css          # Scrollbars, animações, details
+├── js/
+│   └── app.js              # Presets, cálculo, perfil OBS (.zip), coleção de cenas (.json)
+├── docs/
+│   └── documentacao.md     # Este arquivo
+└── README.md
+```
+
 | Arquivo | Função |
 |---------|--------|
-| `index.html` | A ferramenta inteira (HTML, CSS e JavaScript) |
-| `README.md` | Visão geral |
-| `docs/documentacao.md` | Este arquivo |
+| `index.html` | Estrutura HTML, meta, Tailwind CDN + config, GA placeholder |
+| `css/styles.css` | Estilos que não vêm do Tailwind |
+| `js/app.js` | Toda a lógica (presets, calculate, download de perfil e de cenas) |
+| `README.md` | Visão geral para o repositório |
+| `docs/documentacao.md` | Documentação técnica e de manutenção |
 
-Dependências por CDN: **Tailwind CSS** (`cdn.tailwindcss.com`) e **JSZip** (`cdnjs.cloudflare.com`). Sem internet, a página não carrega estilos nem gera o .zip.
+Dependências por CDN: **Tailwind CSS** (`cdn.tailwindcss.com`) e **JSZip** (`cdnjs.cloudflare.com`). Sem internet, a página não carrega o visual completo nem gera o `.zip` do perfil.
 
 ---
 
 ## 7. Pendências antes de publicar
 
-- Ativar o **Google Analytics** (ver instruções no guia de Analytics) e **remover o `track('page_view')` manual** no fim do script.
+- ~~Ativar o **Google Analytics**~~ — **ativo** com Measurement ID `G-Q374NHW29T` (fluxo próprio deste site, separado do Remover de Fundos).
+- ~~Remover o `track('page_view')` manual~~ — **já removido** (o GA4 conta `page_view` sozinho).
 - Trocar os links de apoio **placeholder** (PIX, Ko-fi, LivePix/Membro e o link "YouTube" do rodapé).
 - Revisar a frase "100% gratuita e sem anúncio invasivo" se a ferramenta passar a ser exclusiva para membros.
 - Para um site de produção, considerar compilar o Tailwind em vez do CDN.

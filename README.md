@@ -4,7 +4,9 @@ Ferramenta **grátis** para quem quer começar no OBS Studio sem sofrer: escolha
 
 Criada por [**Yonasan**](https://www.youtube.com/@YonasanErihhi/)
 
-**👉 Abrir a ferramenta:** _(link do GitHub Pages: adicionar depois de publicar)_
+**👉 Repositório:** [yonasan-OBSConfigSceneCalculator](https://github.com/yonasanerihhi/yonasan-OBSConfigSceneCalculator)
+
+**👉 Abrir a ferramenta:** _(GitHub Pages: ative no repositório; URL típica `https://yonasanerihhi.github.io/yonasan-OBSConfigSceneCalculator/`)_
 
 ---
 
@@ -58,7 +60,24 @@ A ferramenta é e continua gratuita. Se ela te poupou tempo, você pode apoiar o
 
 ## 🧰 Tecnologias
 
-HTML + JavaScript em um único arquivo (`index.html`), com [Tailwind CSS](https://tailwindcss.com/) e [JSZip](https://stuk.github.io/jszip/) carregados por CDN. Por isso a primeira abertura precisa de internet.
+- **HTML** (`index.html`) — estrutura da página
+- **CSS** (`css/styles.css`) — estilos customizados (scrollbars, animações, details)
+- **JavaScript** (`js/app.js`) — calculadora, presets, gerador de perfil OBS e montador de cenas
+- [Tailwind CSS](https://tailwindcss.com/) e [JSZip](https://stuk.github.io/jszip/) via CDN (a primeira abertura precisa de internet)
+
+## 📁 Estrutura do projeto
+
+```
+obs-config-scene-calculator/
+├── index.html          # Página principal
+├── css/
+│   └── styles.css      # Estilos próprios
+├── js/
+│   └── app.js          # Lógica da ferramenta
+├── docs/
+│   └── documentacao.md # Documentação técnica
+└── README.md
+```
 
 ## 📄 Documentação
 
